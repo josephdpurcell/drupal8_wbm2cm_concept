@@ -15,7 +15,7 @@ use Drupal\workflows\Entity\Workflow;
  *
  * @see system_install()
  */
-function workspace_preview_system_install() {
+function drupal8_wbm2cm_concept_install() {
   // Run the standard install.
   include_once DRUPAL_ROOT . '/core/profiles/standard/standard.install';
   standard_install();

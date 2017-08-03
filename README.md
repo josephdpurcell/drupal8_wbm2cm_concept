@@ -15,7 +15,7 @@ This will create a docroot folder that contains drupal and the WPS profile
 DB username: `root`  
 DB pass: `<none>`  
 DB host: `localhost`  
-DB Name: `workspace_preview_system`
+DB Name: `drupal8_wbm2cm_concept`
 
 You can override the presets with `-Ddb.<option>=<value>`. For example, to
 change the DB name:

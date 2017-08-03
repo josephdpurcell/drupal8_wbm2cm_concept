@@ -9,10 +9,10 @@
   <property name="db.host" value="localhost" />
   <property name="db.user" value="root" />
   <property name="db.password" value="" />
-  <property name="db.database" value="workspace_preview_system" />
+  <property name="db.database" value="drupal8_wbm2cm_concept" />
   <property name="db.url" value="${db.type}://${db.user}:${db.password}@${db.host}/${db.database}" />
   <property name="docroot" value="docroot" />
-  <property name="profile" value="${docroot}/profiles/workspace_preview_system" />
+  <property name="profile" value="${docroot}/profiles/drupal8_wbm2cm_concept" />
   <property name="site" value="${docroot}/sites/default" />
 
   <!-- Finds Composer, NPM, and rsync. -->
@@ -54,7 +54,7 @@
 
   <!-- Installs wps and sets it up for development. -->
   <target name="install" depends="env">
-    <exec command="${drush} site-install workspace_preview_system --yes --account-pass=admin --db-url=${db.url}" dir="${docroot}" />
+    <exec command="${drush} site-install drupal8_wbm2cm_concept --yes --account-pass=admin --db-url=${db.url}" dir="${docroot}" />
     <exec command="${drush} config-set system.performance css.preprocess 0 --yes --format=boolean" dir="${docroot}" />
     <exec command="${drush} config-set system.performance js.preprocess 0 --yes --format=boolean" dir="${docroot}" />
     <exec command="${drush} config-set system.logging error_level all --yes" dir="${docroot}" />
