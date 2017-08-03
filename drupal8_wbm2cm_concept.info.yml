@@ -1,9 +1,9 @@
-name: Workspace Preview System
+name: Workbench Moderation Migration
 type: profile
-description: 'Getting started with the Workspace Preview System.'
+description: 'A proof of concept to migrate Workbench Moderation to Content Moderation'
 core: 8.x
 distribution:
-  name: Workspace Preview System
+  name: Workbench Moderation Migration
 dependencies:
   - node
   - history

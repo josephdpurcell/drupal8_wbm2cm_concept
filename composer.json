@@ -1,6 +1,6 @@
 {
     "name": "josephdpurcell/drupal8_wbm2cm_concept",
-    "description": "Get started with the Workspace Preview System",
+    "description": "A Drupal 8 install profile to show Workbench Moderation to Content Moderation migration.",
     "type": "drupal-profile",
     "license": "GPL-2.0+",
     "minimum-stability": "dev",
