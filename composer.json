@@ -1,0 +1,44 @@
+{
+    "name": "josephdpurcell/workspace_preview_system",
+    "description": "Get started with the Workspace Preview System",
+    "type": "drupal-profile",
+    "license": "GPL-2.0+",
+    "minimum-stability": "dev",
+    "require-dev": {
+        "phing/phing": "^2.14"
+    },
+    "config": {
+        "bin-dir": "bin/"
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/8"
+        }
+    ],
+    "scripts": {
+        "post-install-cmd": [
+        ],
+        "post-update-cmd": [
+        ],
+        "drupal-scaffold": "DrupalComposer\\DrupalScaffold\\Plugin::scaffold"
+    },
+    "extra": {
+        "installer-paths": {
+            "docroot/core": ["type:drupal-core"],
+            "docroot/libraries/{$name}": ["type:drupal-library"],
+            "docroot/modules/contrib/{$name}": ["type:drupal-module"],
+            "docroot/profiles/contrib/{$name}": ["type:drupal-profile"],
+            "docroot/themes/contrib/{$name}": ["type:drupal-theme"]
+        }
+    },
+    "require": {
+        "composer/installers": "^1.2",
+        "cweagans/composer-patches": "^1.6",
+        "drupal-composer/drupal-scaffold": "^2.2",
+        "webflo/drupal-finder": "^0.3.0",
+        "webmozart/path-util": "^2.3",
+        "drupal/core": "8.4.x-dev",
+        "drupal/workbench_moderation": "1.x-dev"
+    }
+}

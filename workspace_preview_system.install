@@ -1,0 +1,273 @@
+<?php
+
+/**
+ * @file
+ * Enables modules and site configuration for a standard site installation.
+ */
+
+use Drupal\node\Entity\Node;
+use Drupal\workflows\Entity\Workflow;
+
+/**
+ * Implements hook_install().
+ *
+ * Perform actions to set up the site for this profile.
+ *
+ * @see system_install()
+ */
+function workspace_preview_system_install() {
+  // Run the standard install.
+  include_once DRUPAL_ROOT . '/core/profiles/standard/standard.install';
+  standard_install();
+
+  $container = \Drupal::getContainer();
+
+  // Make the "page" content type moderatable.
+  $page_type_storage = \Drupal::entityManager()->getStorage('node_type');
+  $page_type = $page_type_storage->load('page');
+  $page_type->setThirdPartySetting('workbench_moderation', 'enabled', TRUE);
+  $page_type->setThirdPartySetting('workbench_moderation', 'allowed_moderation_states', ['draft', 'needs_review', 'published']);
+  $page_type->setThirdPartySetting('workbench_moderation', 'default_moderation_state', 'draft');
+  $page_type->save();
+
+  // Create moderated content in various states.
+  $entity = Node::create([
+    'type' => 'page',
+    'title' => 'Upcoming Game: Red Team vs Blue Team',
+    'body' => 'The longest rivals in sporting history, Red Team vs Blue Team, play this Saturday in New Orleans.',
+  ]);
+  $entity->moderation_state->target_id = 'published';
+  $entity->save();
+
+  $entity = Node::create([
+    'type' => 'page',
+    'title' => 'Red Team Wins!',
+    'body' => 'What an unbelievable game! The Red Team wins after quadruple over time!',
+  ]);
+  $entity->moderation_state->target_id = 'draft';
+  $entity->save();
+
+  $entity = Node::create([
+    'type' => 'page',
+    'title' => 'Blue Team Wins!',
+    'body' => 'What an unbelievable game! The Blue Team wins after quadruple over time!',
+  ]);
+  $entity->moderation_state->target_id = 'draft';
+  $entity->save();
+
+  // DEBUG: Check the "initial state" of this test by doing the following:
+  //   1. Uncomment the following return statement.
+  //   2. Run install.sh
+  //   3. Notice that Workbench Moderation is enabled on the "article" bundle
+  //   4. And notice the article entities have different moderation states
+  //   5. And notice that you cannot uninstall Workbench Moderation because:
+  //   "There is data for the field moderation_state on entity type Content"
+  //return;
+
+  // -----------------------------------------------------------------------------
+  // Part I. Collect info from Workbench Moderation then remove the module.
+  // -----------------------------------------------------------------------------
+
+  $config = \Drupal::configFactory();
+  $entity_definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $entity_type_manager->clearCachedDefinitions();
+
+  // Collect all states.
+  $states = [];
+  error_log("Collecting moderation state IDs:");
+  foreach ($config->listAll('workbench_moderation.moderation_state.') as $state_ids) {
+    error_log("    $state_ids");
+    $state = $config->getEditable($state_ids);
+    $states[] = $state->get();
+  }
+  error_log("\n");
+
+  error_log(print_r($states,1));
+
+  // Collect all transitions.
+  $transitions = [];
+  error_log("Collecting state transition IDs:");
+  foreach ($config->listAll('workbench_moderation.moderation_state_transition.') as $transition_ids) {
+    error_log("    $transition_ids");
+    $transition = $config->getEditable($transition_ids);
+    $transitions[] = $transition->get();
+  }
+  error_log("\n");
+
+  error_log(print_r($transitions,1));
+
+  // Collect all moderated bundles.
+  // @todo consider leveraging WBM to get the list of enabled bundles?
+  $enabled_bundles = [];
+  error_log("Get bundles that were Workbench Moderated:");
+  foreach ($config->listAll() as $bundle_config_id) {
+    $bundle_config = $config->getEditable($bundle_config_id);
+    if (!$third_party_settings = $bundle_config->get('third_party_settings')) {
+      continue;
+    }
+    $third_party_settings_updated = array_diff_key($third_party_settings, array_flip(['workbench_moderation']));
+    if (count($third_party_settings) !== count($third_party_settings_updated)) {
+      error_log("  HIT: {$bundle_config_id}");
+      // Collect which entity types and bundles have moderation enabled.
+      list($entity_provider, $bundle_config_prefix, $bundle_id) = explode('.', $bundle_config_id);
+      $entity_type_id = FALSE;
+      foreach ($entity_type_manager->getDefinitions() as $entity_definition) {
+        if ($entity_definition->getProvider() === $entity_provider && $entity_definition->get('config_prefix') === $bundle_config_prefix) {
+          $entity_type_id = $entity_definition->getBundleOf();
+          break;
+        }
+      }
+      if (!$entity_type_id) {
+        throw new \Exception('Something went wrong.');
+      }
+      $enabled_bundles[$entity_type_id][] = $bundle_id;
+    }
+    else {
+      error_log("  PASS: {$bundle_config_id}");
+    }
+  }
+  error_log("\n");
+
+  // Collect entity state map and remove Workbench moderation_state field from
+  // enabled bundles.
+  $state_map = [];
+  error_log("Remove Workbench moderation_state field from enabled bundles:");
+  foreach ($enabled_bundles as $entity_type_id=> $bundles) {
+    $state_map[$entity_type_id] = [];
+    error_log("    {$entity_type_id}:");
+    foreach ($bundles as $bundle) {
+      $state_map[$entity_type_id][$bundle] = [];
+      $entity_storage = $entity_type_manager->getStorage($entity_type_id);
+      error_log("        Querying all {$bundle} revisions...");
+      $entity_revisions = \Drupal::entityQuery($entity_type_id)
+        ->condition('type', $bundle)
+        ->allRevisions()
+        ->execute();
+
+      foreach ($entity_revisions as $revision_id => $id) {
+        $entity = $entity_storage->loadRevision($revision_id);
+        $state_map[$entity_type_id][$bundle][$revision_id] = $entity->moderation_state->target_id;
+        error_log("        id:{$id}, revision:{$revision_id} - setting moderation_state of {$entity->moderation_state->target_id} to NULL");
+        $entity->moderation_state = NULL;
+        $entity->save();
+      }
+    }
+  }
+  error_log("\n");
+
+  // Uninstall Workbench Moderation, but not its dependencies.
+  error_log("Uninstalling workbench_moderation module.");
+  \Drupal::service('module_installer')->uninstall(['workbench_moderation'], FALSE);
+  error_log("\n");
+
+  // -----------------------------------------------------------------------------
+  // Part II. Use collected info to enable Content Moderation.
+  // -----------------------------------------------------------------------------
+
+  // Install Workflows module.
+  // Note: this will trigger Workbench Moderation to not be "active" so that it
+  // can be disabled without database integrity errors.
+  error_log("Installing workflows module");
+  \Drupal::service('module_installer')->install(['workflows']);
+  error_log("Installing content_moderation module");
+  \Drupal::service('module_installer')->install(['content_moderation']);
+  error_log("\n");
+
+  // Create and save a workflow entity with the information gathered.
+  // Note: this implies all entities will be squished into a single workflow.
+  $workflow = new Workflow([
+    'id' => 'content_moderation_workflow',
+    'label' => 'Content Moderation Workflow',
+    'type' => 'content_moderation',
+  ], 'workflow');
+  error_log("Add states to Workflow:");
+  foreach ($states as $state) {
+    // @todo document this; or allow the user to resolve this conflict
+    if ($state['id'] == 'draft') {
+      error_log("    Skipping {$state['id']} because it already exists...");
+      continue;
+    }
+    if ($state['id'] == 'published') {
+      error_log("    Skipping {$state['id']} because it already exists...");
+      continue;
+    }
+    error_log("    {$state['id']}:{$state['label']}");
+    $workflow->addState($state['id'], $state['label']);
+    /* @todo where are "published" and "default_revision" now?
+    $workflow['type_settings']['states'][$state['id']] = [
+      'published' => $state['published'],
+      'default_revision' => $state['default_revision'],
+    ];
+    */
+  }
+  error_log("\n");
+
+  error_log("Add transitions to Workflow:");
+  foreach ($transitions as $transition) {
+    // @todo document this loud and clear somewhere
+    // @todo change this logic to what is seen in WorkflowTypeBase line 444
+    if ($transition['stateFrom'] == 'draft' && $transition['stateTo'] == 'draft') {
+      error_log("    Skipping a draft -> draft transition because it is already allowed...");
+      continue;
+    }
+    if ($transition['stateFrom'] == 'draft' && $transition['stateTo'] == 'published') {
+      error_log("    Skipping a draft -> published transition because it is already allowed...");
+      continue;
+    }
+    if ($transition['stateFrom'] == 'published' && $transition['stateTo'] == 'draft') {
+      error_log("    Skipping a published -> draft transition because it is already allowed...");
+      continue;
+    }
+    if ($transition['stateFrom'] == 'published' && $transition['stateTo'] == 'published') {
+      error_log("    Skipping a published -> published transition because it is already allowed...");
+      continue;
+    }
+    error_log("    {$transition['id']}:{$transition['label']}    [{$transition['stateFrom']}] -> {$transition['stateTo']}");
+    $workflow->addTransition($transition['id'], $transition['label'], [$transition['stateFrom']], $transition['stateTo']);
+  }
+  error_log("\n");
+
+  // Add Content Moderation moderation to bundles that were Workbench Moderation moderated.
+  error_log("Enable Content Moderation on bundles:");
+  foreach ($enabled_bundles as $entity_type_id=> $bundles) {
+    foreach ($bundles as $bundle) {
+      $workflow->getTypePlugin()->addEntityTypeAndBundle($entity_type_id, $bundle);
+      error_log("    Enabling Content Moderation on {$bundle}");
+    }
+  }
+  error_log("\n");
+
+  // Save the workflow now that it has all the configurations set.
+  $workflow->save();
+
+  // Set the new moderation state.
+  error_log("Set content moderation state on entities:");
+  foreach ($state_map as $entity_type_id => $bundles) {
+    foreach ($bundles as $bundle => $entities) {
+      error_log("    Processing bundle {$entity_type_id}:{$bundle}");
+      foreach ($entities as $revision_id => $state_id) {
+        $entity = $entity_storage->loadRevision($revision_id);
+        error_log("        {$entity->id()}, revision:{$revision_id} - setting moderation_state to {$state_id}");
+        $entity->moderation_state = $state_id;
+        $entity->save();
+
+      }
+    }
+  }
+  error_log("\n");
+
+  // @todo figure out why node entities do not let you edit the body field
+
+
+  // -----------------------------------------------------------------------------
+  // Part III. Profit.
+  // -----------------------------------------------------------------------------
+  //
+  // You should now have a working Drupal that has 3 page nodes in different
+  // moderation states. Workbench Moderation should be uninstalled, and the
+  // Content Moderation and Workflows modules should be installed.
+  //
+  // Any states and transitions should now appear in the Workflows
+  // configuration.
+}
