@@ -65,7 +65,14 @@ function drupal8_wbm2cm_concept_install() {
   //return;
 
   // -----------------------------------------------------------------------------
-  // Part I. Collect info from Workbench Moderation then remove the module.
+  // Part I. Validate WBM states and transitions
+  // -----------------------------------------------------------------------------
+
+  // @todo validate WBM does not have multiple transitions, see WorkflowTypeBase
+  // @todo validate that there is a 'draft' and 'published' state, which are required
+
+  // -----------------------------------------------------------------------------
+  // Part II. Collect info from Workbench Moderation then remove the module.
   // -----------------------------------------------------------------------------
 
   $config = \Drupal::configFactory();
@@ -162,7 +169,7 @@ function drupal8_wbm2cm_concept_install() {
   error_log("\n");
 
   // -----------------------------------------------------------------------------
-  // Part II. Use collected info to enable Content Moderation.
+  // Part III. Use collected info to enable Content Moderation.
   // -----------------------------------------------------------------------------
 
   // Install Workflows module.
@@ -176,57 +183,42 @@ function drupal8_wbm2cm_concept_install() {
 
   // Create and save a workflow entity with the information gathered.
   // Note: this implies all entities will be squished into a single workflow.
-  $workflow = new Workflow([
+  $workflow_config = [
     'id' => 'content_moderation_workflow',
     'label' => 'Content Moderation Workflow',
     'type' => 'content_moderation',
-  ], 'workflow');
+    'type_settings' => [
+      'states' => [],
+      'transitions' => [],
+    ],
+  ];
   error_log("Add states to Workflow:");
   foreach ($states as $state) {
-    // @todo document this; or allow the user to resolve this conflict
-    if ($state['id'] == 'draft') {
-      error_log("    Skipping {$state['id']} because it already exists...");
-      continue;
-    }
-    if ($state['id'] == 'published') {
-      error_log("    Skipping {$state['id']} because it already exists...");
-      continue;
-    }
     error_log("    {$state['id']}:{$state['label']}");
-    $workflow->addState($state['id'], $state['label']);
-    /* @todo where are "published" and "default_revision" now?
-    $workflow['type_settings']['states'][$state['id']] = [
+    //$workflow->addState($state['id'], $state['label']);
+    //$workflow_type_plugin->addState($state['id'], $state['label']);
+    $workflow_config['type_settings']['states'][$state['id']] = [
+      'label' => $state['label'],
       'published' => $state['published'],
       'default_revision' => $state['default_revision'],
     ];
-    */
   }
   error_log("\n");
 
   error_log("Add transitions to Workflow:");
   foreach ($transitions as $transition) {
-    // @todo document this loud and clear somewhere
-    // @todo change this logic to what is seen in WorkflowTypeBase line 444
-    if ($transition['stateFrom'] == 'draft' && $transition['stateTo'] == 'draft') {
-      error_log("    Skipping a draft -> draft transition because it is already allowed...");
-      continue;
-    }
-    if ($transition['stateFrom'] == 'draft' && $transition['stateTo'] == 'published') {
-      error_log("    Skipping a draft -> published transition because it is already allowed...");
-      continue;
-    }
-    if ($transition['stateFrom'] == 'published' && $transition['stateTo'] == 'draft') {
-      error_log("    Skipping a published -> draft transition because it is already allowed...");
-      continue;
-    }
-    if ($transition['stateFrom'] == 'published' && $transition['stateTo'] == 'published') {
-      error_log("    Skipping a published -> published transition because it is already allowed...");
-      continue;
-    }
     error_log("    {$transition['id']}:{$transition['label']}    [{$transition['stateFrom']}] -> {$transition['stateTo']}");
-    $workflow->addTransition($transition['id'], $transition['label'], [$transition['stateFrom']], $transition['stateTo']);
+    $workflow_config['type_settings']['transitions'][$transition['id']] = [
+      'label' => $transition['label'],
+      'to' => $transition['stateTo'],
+      'from' => explode(',', $transition['stateFrom']),
+    ];
   }
   error_log("\n");
+
+  // Instantiate the workflow from the config.
+  $workflow = new Workflow($workflow_config, 'workflow');
+  $workflow_type_plugin = $workflow->getTypePlugin();
 
   // Add Content Moderation moderation to bundles that were Workbench Moderation moderated.
   error_log("Enable Content Moderation on bundles:");
@@ -259,9 +251,8 @@ function drupal8_wbm2cm_concept_install() {
 
   // @todo figure out why node entities do not let you edit the body field
 
-
   // -----------------------------------------------------------------------------
-  // Part III. Profit.
+  // Part IV. Profit.
   // -----------------------------------------------------------------------------
   //
   // You should now have a working Drupal that has 3 page nodes in different
