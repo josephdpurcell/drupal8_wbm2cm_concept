@@ -37,6 +37,7 @@
         "cweagans/composer-patches": "^1.6",
         "drupal-composer/drupal-scaffold": "^2.2",
         "drupal/core": "8.4.0-alpha1",
-        "drupal/workbench_moderation": "1.x-dev"
+        "drupal/workbench_moderation": "1.x-dev",
+        "josephdpurcell/wbm2cm": "1.0.0"
     }
 }

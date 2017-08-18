@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "678f2a9d8d67bbaa16c0aaeb624b0e24",
+    "content-hash": "3db6a9f383753291b5d305933ccb41c6",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1299,6 +1299,32 @@
                 "url"
             ],
             "time": "2017-07-17T09:11:21+00:00"
+        },
+        {
+            "name": "josephdpurcell/wbm2cm",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/josephdpurcell/wbm2cm.git",
+                "reference": "072551148cf2552285c17e18154e5f2c3788294a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/josephdpurcell/wbm2cm/zipball/072551148cf2552285c17e18154e5f2c3788294a",
+                "reference": "072551148cf2552285c17e18154e5f2c3788294a",
+                "shasum": ""
+            },
+            "type": "drupal-module",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0+"
+            ],
+            "description": "Migrates from Drupal 8.4 Workbench Moderation to Content Moderation.",
+            "homepage": "https://github.com/josephdpurcell/wbm2cm",
+            "keywords": [
+                "drupal"
+            ],
+            "time": "2017-08-18T01:36:32+00:00"
         },
         {
             "name": "masterminds/html5",
@@ -3078,7 +3104,7 @@
         "drupal/workbench_moderation": 20
     },
     "prefer-stable": false,
-    "prefer-lowest": false,
+    "prefer-lowest": true,
     "platform": [],
     "platform-dev": []
 }

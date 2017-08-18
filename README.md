@@ -1,8 +1,10 @@
 # Drupal 8 Workbench Moderation to Content Moderation Migration Concept
 
-This repo is the install profile that shows the logic for migrating from WBM to CM in Drupal 8.4.
+This repo is the install profile that creates a scenario to test migrating from WBM to CM in Drupal 8.4.
 
 To easily install, see [https://github.com/josephdpurcell/drupal8_wbm2cm_concept-project](https://github.com/josephdpurcell/drupal8_wbm2cm_concept-project)
+
+For the module that runs the migration, see [https://github.com/josephdpurcell/wbm2cm](https://github.com/josephdpurcell/wbm2cm).
 
 ## Developer Install
 
@@ -10,7 +12,7 @@ To easily install, see [https://github.com/josephdpurcell/drupal8_wbm2cm_concept
 
     composer install
 
-This will create a docroot folder that contains drupal and the WPS profile
+This will create a docroot folder that contains Drupal and the drupal8_wbm2cm_concept profile
 
 ### Install WPS
 
